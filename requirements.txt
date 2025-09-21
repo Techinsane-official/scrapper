@@ -32,9 +32,9 @@ python-dateutil==2.8.2
 fuzzywuzzy==0.18.0
 python-levenshtein==0.23.0
 
-# Image Processing
-Pillow==10.1.0
-opencv-python==4.8.1.78
+# Image Processing (commented out for basic API)
+# Pillow==10.1.0
+# opencv-python==4.8.1.78
 
 # Proxy & Networking
 requests[socks]==2.31.0
@@ -53,19 +53,17 @@ cryptography>=42.0.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
-# Development Tools
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.1
-pre-commit==3.6.0
+# Development Tools (commented out for production)
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# pytest-cov==4.1.0
+# black==23.11.0
+# flake8==6.1.0
+# mypy==1.7.1
+# pre-commit==3.6.0
 
 # Production
 gunicorn==21.2.0
-supervisor==4.2.5
-systemd-python==235
 
 # Utilities
 python-dotenv==1.0.0
