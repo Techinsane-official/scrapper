@@ -234,6 +234,11 @@ async def get_current_user(current_user: dict = Depends(verify_token)):
     """Get current user info"""
     return current_user
 
+@app.get("/api/auth/me")
+async def get_auth_user(current_user: dict = Depends(verify_token)):
+    """Get current authenticated user info"""
+    return current_user
+
 @app.post("/api/jobs")
 async def create_job(job: ScrapingJobCreate, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     """Create a new scraping job"""
