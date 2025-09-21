@@ -41,10 +41,9 @@ export default function LoginPage() {
       const response = await api.login(data.email, data.password)
       console.log('Login response:', response)
       
-      // Store the token in cookies
-      if (response.access_token) {
-        Cookies.set('access_token', response.access_token, { expires: 7 })
-        console.log('Token stored:', response.access_token)
+      // Token is already stored by the API method, just log success
+      if (response.token) {
+        console.log('Token stored:', response.token)
       }
       
       toast.success('Login successful!')
