@@ -16,6 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* @ts-ignore */}
       <AuthProvider>
         {children}
       </AuthProvider>
