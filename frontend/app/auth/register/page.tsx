@@ -9,6 +9,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { api } from '@/lib/api'
+import Cookies from 'js-cookie'
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -41,7 +42,7 @@ export default function RegisterPage() {
       await api.register(data.email, data.password, data.fullName)
       console.log('Registration successful')
       
-      toast.success('Account created successfully!')
+      toast.success('Account created successfully! Please login.')
       router.push('/auth/login')
     } catch (error: any) {
       console.error('Registration error:', error)

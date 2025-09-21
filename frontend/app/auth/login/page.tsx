@@ -9,6 +9,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 import { api } from '@/lib/api'
+import Cookies from 'js-cookie'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -39,6 +40,12 @@ export default function LoginPage() {
       // Try to login via the API
       const response = await api.login(data.email, data.password)
       console.log('Login response:', response)
+      
+      // Store the token in cookies
+      if (response.access_token) {
+        Cookies.set('access_token', response.access_token, { expires: 7 })
+        console.log('Token stored:', response.access_token)
+      }
       
       toast.success('Login successful!')
       router.push('/dashboard')
