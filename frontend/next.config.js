@@ -42,7 +42,7 @@ const nextConfig = {
   },
   // Optimize for Vercel
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // Disabled due to critters module issue
   },
   // Enable compression
   compress: true,
