@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { api } from '@/lib/api'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -32,12 +33,18 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
     try {
-      // For now, just simulate a successful login
-      console.log('Login attempt:', data)
+      console.log('Attempting login with:', data)
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)
+      
+      // Try to login via the API
+      const response = await api.login(data.email, data.password)
+      console.log('Login response:', response)
+      
       toast.success('Login successful!')
       router.push('/dashboard')
     } catch (error: any) {
-      toast.error(error.message || 'Login failed')
+      console.error('Login error:', error)
+      toast.error(error.response?.data?.detail || error.message || 'Login failed')
     } finally {
       setIsLoading(false)
     }
@@ -134,6 +141,14 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+        
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+          <p className="text-sm text-gray-600">
+            <strong>Debug Info:</strong><br/>
+            API URL: {process.env.NEXT_PUBLIC_API_URL || 'Not set'}<br/>
+            Environment: {process.env.NODE_ENV}
+          </p>
+        </div>
       </div>
     </div>
   )

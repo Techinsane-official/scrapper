@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import { api } from '@/lib/api'
 
 const registerSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -33,12 +34,18 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     try {
-      // For now, just simulate a successful registration
-      console.log('Registration attempt:', data)
+      console.log('Attempting registration with:', data)
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)
+      
+      // Try to register via the API
+      await api.register(data.email, data.password, data.fullName)
+      console.log('Registration successful')
+      
       toast.success('Account created successfully!')
       router.push('/auth/login')
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed')
+      console.error('Registration error:', error)
+      toast.error(error.response?.data?.detail || error.message || 'Registration failed')
     } finally {
       setIsLoading(false)
     }
@@ -151,6 +158,14 @@ export default function RegisterPage() {
             </button>
           </div>
         </form>
+        
+        <div className="mt-4 p-4 bg-gray-100 rounded-md">
+          <p className="text-sm text-gray-600">
+            <strong>Debug Info:</strong><br/>
+            API URL: {process.env.NEXT_PUBLIC_API_URL || 'Not set'}<br/>
+            Environment: {process.env.NODE_ENV}
+          </p>
+        </div>
       </div>
     </div>
   )
