@@ -17,6 +17,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Supabase configuration
+SUPABASE_URL = os.getenv("NEXT_PUBLIC_SUPABASE_URL", "https://ndyhnflavubulhjickkj.supabase.co")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5keWhuZmxhdnVidWxoamlja2tqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODQ0NjI1OCwiZXhwIjoyMDc0MDIyMjU4fQ.SEcFx7Posp3e3TJPKxuzUsKWEB0jprgd2F61rKIz7PE")
+
 app = FastAPI(title="Premium Scraper API", version="1.0.0")
 
 # Add CORS middleware
@@ -31,10 +35,32 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# In-memory storage (replace with database in production)
+# In-memory storage for jobs and products (will be replaced with database)
 jobs_db = {}
 products_db = {}
-users_db = {}
+
+# Supabase helper functions
+async def supabase_request(method: str, table: str, data: dict = None, params: dict = None):
+    """Make a request to Supabase REST API"""
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    headers = {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.request(method, url, headers=headers, json=data, params=params) as response:
+            if response.status >= 400:
+                error_text = await response.text()
+                logger.error(f"Supabase error: {response.status} - {error_text}")
+                raise HTTPException(status_code=response.status, detail=f"Database error: {error_text}")
+            
+            if response.status == 204:  # No content
+                return None
+            
+            return await response.json()
 
 # Pydantic models
 class UserCreate(BaseModel):
@@ -199,35 +225,64 @@ async def health_check():
 @app.post("/api/auth/register")
 async def register(user: UserCreate):
     """Register a new user"""
-    if user.email in users_db:
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    user_id = str(uuid.uuid4())
-    users_db[user.email] = {
-        "id": user_id,
-        "email": user.email,
-        "full_name": user.full_name,
-        "created_at": datetime.now()
-    }
-    
-    return {"message": "User created successfully", "user_id": user_id}
+    try:
+        # Check if user already exists
+        existing_users = await supabase_request("GET", "users", params={"email": f"eq.{user.email}"})
+        if existing_users:
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        # Create new user
+        user_data = {
+            "id": str(uuid.uuid4()),
+            "email": user.email,
+            "full_name": user.full_name,
+            "password": user.password,  # In production, hash this password
+            "created_at": datetime.now().isoformat()
+        }
+        
+        result = await supabase_request("POST", "users", data=user_data)
+        logger.info(f"User registered: {user.email}")
+        
+        return {"message": "User created successfully", "user_id": user_data["id"]}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail="Registration failed")
 
 @app.post("/api/auth/login")
 async def login(user: UserLogin):
     """Login user"""
-    if user.email not in users_db:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    # Simple authentication (replace with proper password hashing)
-    return {
-        "access_token": "demo_token",
-        "token_type": "bearer",
-        "user": {
-            "id": users_db[user.email]["id"],
-            "email": user.email,
-            "full_name": users_db[user.email]["full_name"]
+    try:
+        # Find user in database
+        users = await supabase_request("GET", "users", params={"email": f"eq.{user.email}"})
+        if not users:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        user_data = users[0]
+        
+        # Simple password check (in production, use proper password hashing)
+        if user_data.get("password") != user.password:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+        logger.info(f"User logged in: {user.email}")
+        
+        return {
+            "access_token": "demo_token",
+            "token_type": "bearer",
+            "user": {
+                "id": user_data["id"],
+                "email": user_data["email"],
+                "full_name": user_data["full_name"]
+            }
         }
-    }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=500, detail="Login failed")
 
 @app.get("/api/user/me")
 async def get_current_user(current_user: dict = Depends(verify_token)):
