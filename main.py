@@ -237,6 +237,8 @@ async def register(user: UserCreate):
             "email": user.email,
             "full_name": user.full_name,
             "password": user.password,  # In production, hash this password
+            "role": "user",
+            "is_active": True,
             "created_at": datetime.now().isoformat()
         }
         
