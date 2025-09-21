@@ -93,7 +93,7 @@ export function RecentJobs() {
             No jobs found. Create your first scraping job to get started.
           </div>
         ) : (
-          recentJobs.map((job) => (
+          recentJobs.map((job: ScrapingJob) => (
             <div key={job.id} className="p-6 hover:bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
