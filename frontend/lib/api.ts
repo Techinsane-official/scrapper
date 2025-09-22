@@ -170,12 +170,10 @@ export const api = {
   },
 
   async createJob(jobData: {
-    name: string
-    description?: string
-    retailer: string
-    category?: string
-    search_query?: string
+    url: string
+    job_type: string
     max_pages: number
+    keywords?: string
   }) {
     const response = await apiClient.post('/api/jobs', jobData)
     return response.data
