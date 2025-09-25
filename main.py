@@ -108,12 +108,17 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         return {"user_id": "demo_user", "email": "demo@example.com"}
     raise HTTPException(status_code=401, detail="Invalid token")
 
-# Scraping functions
+# Enhanced scraping functions
 async def scrape_amazon_product(url: str, session: aiohttp.ClientSession) -> Dict[str, Any]:
-    """Scrape Amazon product data"""
+    """Enhanced Amazon product scraper with comprehensive data extraction"""
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
         }
         
         async with session.get(url, headers=headers) as response:
@@ -123,21 +128,48 @@ async def scrape_amazon_product(url: str, session: aiohttp.ClientSession) -> Dic
             html = await response.text()
             soup = BeautifulSoup(html, 'html.parser')
             
-            # Extract product data
+            # Initialize comprehensive product data
             product_data = {
                 'title': '',
-                'price': '',
-                'rating': '',
-                'reviews_count': '',
-                'image_url': '',
-                'url': url
+                'description': '',
+                'bullet_points': [],
+                'brand': '',
+                'model': '',
+                'sku': '',
+                'category': '',
+                'subcategory': '',
+                'current_price': None,
+                'original_price': None,
+                'discount_percentage': None,
+                'availability': 'unknown',
+                'stock_quantity': None,
+                'shipping_info': '',
+                'primary_image_url': '',
+                'additional_images': [],
+                'video_urls': [],
+                'specifications': {},
+                'dimensions': {},
+                'materials': [],
+                'features': [],
+                'compatibility': [],
+                'variations': [],
+                'rating': None,
+                'review_count': None,
+                'review_distribution': {},
+                'best_seller_rank': None,
+                'source_url': url,
+                'retailer': 'amazon',
+                'last_updated': datetime.now().isoformat(),
+                'data_quality_score': 0.0,
+                'scraping_status': 'completed'
             }
             
-            # Title
+            # Title extraction
             title_selectors = [
                 '#productTitle',
                 'h1.a-size-large',
-                '.a-size-large.product-title-word-break'
+                '.a-size-large.product-title-word-break',
+                'h1[data-automation-id="product-title"]'
             ]
             for selector in title_selectors:
                 title_elem = soup.select_one(selector)
@@ -145,39 +177,178 @@ async def scrape_amazon_product(url: str, session: aiohttp.ClientSession) -> Dic
                     product_data['title'] = title_elem.get_text().strip()
                     break
             
-            # Price
+            # Description extraction
+            desc_selectors = [
+                '#feature-bullets ul',
+                '.a-unordered-list.a-vertical.a-spacing-mini',
+                '#productDescription p'
+            ]
+            for selector in desc_selectors:
+                desc_elem = soup.select_one(selector)
+                if desc_elem:
+                    if selector == '#productDescription p':
+                        product_data['description'] = desc_elem.get_text().strip()
+                    else:
+                        # Extract bullet points
+                        bullets = desc_elem.find_all('li')
+                        product_data['bullet_points'] = [li.get_text().strip() for li in bullets if li.get_text().strip()]
+                    break
+            
+            # Brand extraction
+            brand_selectors = [
+                '#bylineInfo',
+                '.a-link-normal[href*="/brand/"]',
+                'a[href*="/brand/"]'
+            ]
+            for selector in brand_selectors:
+                brand_elem = soup.select_one(selector)
+                if brand_elem:
+                    product_data['brand'] = brand_elem.get_text().strip()
+                    break
+            
+            # Price extraction (enhanced)
             price_selectors = [
                 '.a-price-whole',
                 '.a-price .a-offscreen',
                 '#priceblock_dealprice',
-                '#priceblock_ourprice'
+                '#priceblock_ourprice',
+                '.a-price-range .a-offscreen',
+                '.a-price .a-price-whole'
             ]
             for selector in price_selectors:
                 price_elem = soup.select_one(selector)
                 if price_elem:
-                    product_data['price'] = price_elem.get_text().strip()
+                    price_text = price_elem.get_text().strip()
+                    # Extract numeric price
+                    price_match = re.search(r'[\d,]+\.?\d*', price_text.replace('$', '').replace(',', ''))
+                    if price_match:
+                        try:
+                            product_data['current_price'] = float(price_match.group())
+                        except ValueError:
+                            pass
                     break
             
-            # Rating
+            # Original price (for discounts)
+            original_price_elem = soup.select_one('.a-text-price .a-offscreen')
+            if original_price_elem:
+                original_price_text = original_price_elem.get_text().strip()
+                original_price_match = re.search(r'[\d,]+\.?\d*', original_price_text.replace('$', '').replace(',', ''))
+                if original_price_match:
+                    try:
+                        product_data['original_price'] = float(original_price_match.group())
+                        if product_data['current_price'] and product_data['original_price']:
+                            discount = ((product_data['original_price'] - product_data['current_price']) / product_data['original_price']) * 100
+                            product_data['discount_percentage'] = round(discount, 2)
+                    except ValueError:
+                        pass
+            
+            # Availability extraction
+            availability_selectors = [
+                '#availability span',
+                '.a-size-medium.a-color-success',
+                '.a-size-medium.a-color-price',
+                '#outOfStock'
+            ]
+            for selector in availability_selectors:
+                avail_elem = soup.select_one(selector)
+                if avail_elem:
+                    avail_text = avail_elem.get_text().strip().lower()
+                    if 'in stock' in avail_text:
+                        product_data['availability'] = 'in_stock'
+                    elif 'out of stock' in avail_text or 'unavailable' in avail_text:
+                        product_data['availability'] = 'out_of_stock'
+                    elif 'pre-order' in avail_text:
+                        product_data['availability'] = 'pre_order'
+                    elif 'limited' in avail_text:
+                        product_data['availability'] = 'limited_stock'
+                    break
+            
+            # Rating extraction
             rating_elem = soup.select_one('.a-icon-alt')
             if rating_elem:
                 rating_text = rating_elem.get_text()
                 rating_match = re.search(r'(\d+\.?\d*)', rating_text)
                 if rating_match:
-                    product_data['rating'] = rating_match.group(1)
+                    try:
+                        product_data['rating'] = float(rating_match.group(1))
+                    except ValueError:
+                        pass
             
-            # Reviews count
+            # Reviews count extraction
             reviews_elem = soup.select_one('#acrCustomerReviewText')
             if reviews_elem:
                 reviews_text = reviews_elem.get_text()
                 reviews_match = re.search(r'(\d+)', reviews_text.replace(',', ''))
                 if reviews_match:
-                    product_data['reviews_count'] = reviews_match.group(1)
+                    try:
+                        product_data['review_count'] = int(reviews_match.group(1))
+                    except ValueError:
+                        pass
             
-            # Image
-            img_elem = soup.select_one('#landingImage')
-            if img_elem:
-                product_data['image_url'] = img_elem.get('src')
+            # Primary image extraction
+            img_selectors = [
+                '#landingImage',
+                '#imgBlkFront',
+                '.a-dynamic-image'
+            ]
+            for selector in img_selectors:
+                img_elem = soup.select_one(selector)
+                if img_elem:
+                    product_data['primary_image_url'] = img_elem.get('src') or img_elem.get('data-src')
+                    break
+            
+            # Additional images
+            additional_imgs = soup.select('#altImages img')
+            for img in additional_imgs:
+                img_url = img.get('src') or img.get('data-src')
+                if img_url and img_url not in product_data['additional_images']:
+                    product_data['additional_images'].append(img_url)
+            
+            # Specifications extraction
+            spec_table = soup.select_one('#productDetails_techSpec_section_1 table')
+            if spec_table:
+                rows = spec_table.find_all('tr')
+                for row in rows:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) == 2:
+                        key = cells[0].get_text().strip()
+                        value = cells[1].get_text().strip()
+                        if key and value:
+                            product_data['specifications'][key] = value
+            
+            # Features extraction
+            features_section = soup.select_one('#feature-bullets')
+            if features_section:
+                feature_items = features_section.find_all('li')
+                for item in feature_items:
+                    feature_text = item.get_text().strip()
+                    if feature_text and len(feature_text) > 10:  # Filter out short items
+                        product_data['features'].append(feature_text)
+            
+            # Best seller rank
+            bsr_elem = soup.select_one('#SalesRank')
+            if bsr_elem:
+                bsr_text = bsr_elem.get_text()
+                bsr_match = re.search(r'#(\d+)', bsr_text.replace(',', ''))
+                if bsr_match:
+                    try:
+                        product_data['best_seller_rank'] = int(bsr_match.group(1))
+                    except ValueError:
+                        pass
+            
+            # Calculate data quality score
+            quality_score = 0.0
+            if product_data['title']: quality_score += 0.2
+            if product_data['current_price']: quality_score += 0.15
+            if product_data['rating']: quality_score += 0.1
+            if product_data['primary_image_url']: quality_score += 0.1
+            if product_data['brand']: quality_score += 0.1
+            if product_data['availability'] != 'unknown': quality_score += 0.1
+            if product_data['specifications']: quality_score += 0.1
+            if product_data['features']: quality_score += 0.1
+            if product_data['bullet_points']: quality_score += 0.05
+            
+            product_data['data_quality_score'] = min(quality_score, 1.0)
             
             return product_data
             
