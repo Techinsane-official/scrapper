@@ -227,6 +227,54 @@ export const api = {
     return response.data
   },
 
+  // Enhanced Marketplace APIs
+  async getMarketplaceAnalytics() {
+    const response = await apiClient.get('/api/marketplace-analytics')
+    return response.data
+  },
+
+  async getPriceChanges() {
+    const response = await apiClient.get('/api/price-changes')
+    return response.data
+  },
+
+  async startPriceMonitoring() {
+    const response = await apiClient.post('/api/start-price-monitoring')
+    return response.data
+  },
+
+  // Scheduled Jobs
+  async getScheduledJobs() {
+    const response = await apiClient.get('/api/scheduled-jobs')
+    return response.data
+  },
+
+  async scheduleJob(jobConfig: any) {
+    const response = await apiClient.post('/api/schedule-job', jobConfig)
+    return response.data
+  },
+
+  async cancelScheduledJob(jobId: string) {
+    const response = await apiClient.delete(`/api/scheduled-jobs/${jobId}`)
+    return response.data
+  },
+
+  // Product Curation
+  async curateProducts(curationRules: any) {
+    const response = await apiClient.post('/api/curate-products', curationRules)
+    return response.data
+  },
+
+  async getCuratedProducts(limit = 50, offset = 0) {
+    const response = await apiClient.get(`/api/curated-products?limit=${limit}&offset=${offset}`)
+    return response.data
+  },
+
+  async deduplicateProducts() {
+    const response = await apiClient.post('/api/deduplicate-products')
+    return response.data
+  },
+
   async deleteUser(userId: string) {
     const response = await apiClient.delete(`/api/users/${userId}`)
     return response.data
