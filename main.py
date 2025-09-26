@@ -868,6 +868,11 @@ async def schedule_price_monitoring():
 async def root():
     return {"message": "Premium Scraper API is running!", "status": "success", "version": "1.0.0"}
 
+@app.get("/api/test")
+async def test_endpoint():
+    """Test endpoint to verify API is working"""
+    return {"message": "API is working", "timestamp": datetime.now().isoformat()}
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "API is working", "timestamp": datetime.now()}
@@ -971,6 +976,20 @@ async def create_job(job: ScrapingJobCreate, background_tasks: BackgroundTasks, 
 @app.get("/api/jobs")
 async def get_jobs(current_user: dict = Depends(verify_token)):
     """Get all jobs for current user"""
+    try:
+        # If no jobs exist, return empty array
+        if not jobs_db:
+            return {"jobs": [], "total": 0}
+        
+        jobs = list(jobs_db.values())
+        return {"jobs": jobs, "total": len(jobs)}
+    except Exception as e:
+        logger.error(f"Error getting jobs: {e}")
+        return {"jobs": [], "total": 0}
+
+@app.get("/api/jobs-public")
+async def get_jobs_public():
+    """Public jobs endpoint for testing"""
     try:
         # If no jobs exist, return empty array
         if not jobs_db:
