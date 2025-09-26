@@ -15,7 +15,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
 
-  const { data: products, isLoading, error } = useQuery('products', api.getProducts, {
+  const { data: products, isLoading, error } = useQuery('products', () => api.getProducts(), {
     onError: (err: any) => {
       console.error('Error fetching products:', err)
     }
