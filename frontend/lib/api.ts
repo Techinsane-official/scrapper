@@ -220,7 +220,7 @@ export const api = {
   // Users (admin only)
   async getUsers() {
     const response = await apiClient.get('/api/users')
-    return response.data
+    return response.data.users || []
   },
 
   async updateUser(userId: string, userData: Partial<User>) {

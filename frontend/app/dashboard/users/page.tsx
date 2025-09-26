@@ -17,7 +17,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
 
-  const { data: users, isLoading, error } = useQuery('users', api.getUsers, {
+  const { data: users, isLoading, error } = useQuery('users', () => api.getUsers(), {
     onError: (err: any) => {
       console.error('Error fetching users:', err)
     }
