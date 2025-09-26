@@ -161,13 +161,13 @@ export const api = {
   // Jobs
   async getJobs() {
     const response = await apiClient.get('/api/jobs')
-    return response.data
+    return response.data.jobs || []
   },
 
   async getProducts(jobId?: string) {
     const url = jobId ? `/api/products/job/${jobId}` : '/api/products'
     const response = await apiClient.get(url)
-    return response.data
+    return response.data.products || []
   },
 
   async createJob(jobData: {

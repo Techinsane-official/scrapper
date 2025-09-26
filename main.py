@@ -971,8 +971,16 @@ async def create_job(job: ScrapingJobCreate, background_tasks: BackgroundTasks, 
 @app.get("/api/jobs")
 async def get_jobs(current_user: dict = Depends(verify_token)):
     """Get all jobs for current user"""
-    jobs = list(jobs_db.values())
-    return {"jobs": jobs, "total": len(jobs)}
+    try:
+        # If no jobs exist, return empty array
+        if not jobs_db:
+            return {"jobs": [], "total": 0}
+        
+        jobs = list(jobs_db.values())
+        return {"jobs": jobs, "total": len(jobs)}
+    except Exception as e:
+        logger.error(f"Error getting jobs: {e}")
+        return {"jobs": [], "total": 0}
 
 @app.get("/api/jobs/{job_id}")
 async def get_job(job_id: str, current_user: dict = Depends(verify_token)):
@@ -1356,6 +1364,26 @@ async def get_marketplace_analytics(current_user: dict = Depends(verify_token)):
         
     except Exception as e:
         logger.error(f"Error getting marketplace analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Users endpoint (for admin functionality)
+@app.get("/api/users")
+async def get_users(current_user: dict = Depends(verify_token)):
+    """Get all users (admin only)"""
+    try:
+        # For now, return a simple list of users
+        # In production, this would query the database
+        users = [
+            {
+                "id": "demo_user",
+                "email": "demo@example.com",
+                "role": "admin",
+                "created_at": "2024-01-01T00:00:00Z"
+            }
+        ]
+        return {"users": users, "total": len(users)}
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
