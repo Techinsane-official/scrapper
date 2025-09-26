@@ -74,9 +74,10 @@ class UserLogin(BaseModel):
 
 class ScrapingJobCreate(BaseModel):
     url: str
-    job_type: str = "amazon_product"
+    job_type: str = "product"
     max_pages: int = 1
     keywords: Optional[str] = None
+    retailer: Optional[str] = None
 
 class ScrapingJob(BaseModel):
     id: str
@@ -719,11 +720,31 @@ async def scrape_bestbuy_product(url: str, session: aiohttp.ClientSession) -> Di
         logger.error(f"Error scraping Best Buy product: {e}")
         raise e
 
+def detect_retailer_from_url(url: str) -> str:
+    """Detect retailer from URL"""
+    url_lower = url.lower()
+    if 'amazon.com' in url_lower or 'amazon.' in url_lower:
+        return 'amazon'
+    elif 'walmart.com' in url_lower:
+        return 'walmart'
+    elif 'target.com' in url_lower:
+        return 'target'
+    elif 'bestbuy.com' in url_lower:
+        return 'bestbuy'
+    else:
+        return 'amazon'  # Default to Amazon
+
 async def execute_scraping_job(job_id: str, job_data: ScrapingJobCreate):
     """Execute a scraping job in the background with multi-retailer support"""
     try:
         jobs_db[job_id]['status'] = 'running'
-        logger.info(f"Starting job {job_id} for retailer: {job_data.retailer}")
+        
+        # Auto-detect retailer from URL if not provided
+        retailer = getattr(job_data, 'retailer', None)
+        if not retailer:
+            retailer = detect_retailer_from_url(job_data.url)
+        
+        logger.info(f"Starting job {job_id} for retailer: {retailer}")
         
         products = []
         async with aiohttp.ClientSession() as session:
@@ -735,9 +756,9 @@ async def execute_scraping_job(job_id: str, job_data: ScrapingJobCreate):
                 'bestbuy': scrape_bestbuy_product
             }
             
-            scraper_func = scraper_map.get(job_data.retailer.lower())
+            scraper_func = scraper_map.get(retailer.lower())
             if not scraper_func:
-                raise Exception(f"Unsupported retailer: {job_data.retailer}")
+                raise Exception(f"Unsupported retailer: {retailer}")
             
             # Handle different job types
             if job_data.job_type == "product":
@@ -752,11 +773,11 @@ async def execute_scraping_job(job_id: str, job_data: ScrapingJobCreate):
                 
             elif job_data.job_type == "search":
                 # Search-based scraping (placeholder for now)
-                logger.info(f"Search scraping not yet implemented for {job_data.retailer}")
+                logger.info(f"Search scraping not yet implemented for {retailer}")
                 
             elif job_data.job_type == "catalog":
                 # Catalog scraping (placeholder for now)
-                logger.info(f"Catalog scraping not yet implemented for {job_data.retailer}")
+                logger.info(f"Catalog scraping not yet implemented for {retailer}")
         
         jobs_db[job_id]['status'] = 'completed'
         jobs_db[job_id]['completed_at'] = datetime.now()
