@@ -112,6 +112,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 # Enhanced scraping functions
 async def scrape_amazon_product(url: str, session: aiohttp.ClientSession) -> Dict[str, Any]:
     """Enhanced Amazon product scraper with comprehensive data extraction"""
+    logger.info(f"Amazon scraper called with URL: {url}")
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -351,6 +352,7 @@ async def scrape_amazon_product(url: str, session: aiohttp.ClientSession) -> Dic
             
             product_data['data_quality_score'] = min(quality_score, 1.0)
             
+            logger.info(f"Amazon scraper completed. Title: {product_data.get('title', 'No title')}, Price: {product_data.get('current_price', 'No price')}")
             return product_data
             
     except Exception as e:
@@ -763,13 +765,18 @@ async def execute_scraping_job(job_id: str, job_data: ScrapingJobCreate):
             # Handle different job types
             if job_data.job_type == "product":
                 # Single product scraping
+                logger.info(f"Starting to scrape URL: {job_data.url}")
                 product_data = await scraper_func(job_data.url, session)
+                logger.info(f"Scraped data keys: {list(product_data.keys())}")
+                logger.info(f"Product title: {product_data.get('title', 'No title')}")
+                
                 product_data['id'] = str(uuid.uuid4())
                 product_data['job_id'] = job_id
                 product_data['scraped_at'] = datetime.now()
                 
                 products.append(product_data)
                 products_db[product_data['id']] = product_data
+                logger.info(f"Successfully stored product with ID: {product_data['id']}")
                 
             elif job_data.job_type == "search":
                 # Search-based scraping (placeholder for now)
