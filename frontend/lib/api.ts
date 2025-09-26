@@ -164,8 +164,9 @@ export const api = {
     return response.data
   },
 
-  async getJob(jobId: string) {
-    const response = await apiClient.get(`/api/jobs/${jobId}`)
+  async getProducts(jobId?: string) {
+    const url = jobId ? `/api/products/job/${jobId}` : '/api/products'
+    const response = await apiClient.get(url)
     return response.data
   },
 
