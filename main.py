@@ -768,17 +768,28 @@ async def execute_scraping_job(job_id: str, job_data: ScrapingJobCreate):
             if job_data.job_type == "product":
                 # Single product scraping
                 logger.info(f"Starting to scrape URL: {job_data.url}")
-                product_data = await scraper_func(job_data.url, session)
-                logger.info(f"Scraped data keys: {list(product_data.keys())}")
-                logger.info(f"Product title: {product_data.get('title', 'No title')}")
-                
-                product_data['id'] = str(uuid.uuid4())
-                product_data['job_id'] = job_id
-                product_data['scraped_at'] = datetime.now()
-                
-                products.append(product_data)
-                products_db[product_data['id']] = product_data
-                logger.info(f"Successfully stored product with ID: {product_data['id']}")
+                try:
+                    product_data = await scraper_func(job_data.url, session)
+                    logger.info(f"Scraped data keys: {list(product_data.keys())}")
+                    logger.info(f"Product title: {product_data.get('title', 'No title')}")
+                    logger.info(f"Product data: {product_data}")
+                    
+                    # Check if we got any meaningful data
+                    if not product_data.get('title') and not product_data.get('current_price'):
+                        logger.warning(f"No meaningful data scraped from {job_data.url}")
+                        logger.warning(f"Full product data: {product_data}")
+                    
+                    product_data['id'] = str(uuid.uuid4())
+                    product_data['job_id'] = job_id
+                    product_data['scraped_at'] = datetime.now()
+                    
+                    products.append(product_data)
+                    products_db[product_data['id']] = product_data
+                    logger.info(f"Successfully stored product with ID: {product_data['id']}")
+                except Exception as scrape_error:
+                    logger.error(f"Error during scraping: {scrape_error}")
+                    logger.error(f"Scraping error type: {type(scrape_error)}")
+                    raise scrape_error
                 
             elif job_data.job_type == "search":
                 # Search-based scraping (placeholder for now)
