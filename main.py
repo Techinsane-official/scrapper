@@ -738,8 +738,10 @@ def detect_retailer_from_url(url: str) -> str:
 
 async def execute_scraping_job(job_id: str, job_data: ScrapingJobCreate):
     """Execute a scraping job in the background with multi-retailer support"""
+    logger.info(f"=== EXECUTE_SCRAPING_JOB CALLED === Job ID: {job_id}, URL: {job_data.url}")
     try:
         jobs_db[job_id]['status'] = 'running'
+        logger.info(f"Job {job_id} status updated to 'running'")
         
         # Auto-detect retailer from URL if not provided
         retailer = getattr(job_data, 'retailer', None)
@@ -899,6 +901,7 @@ async def root():
 @app.get("/api/test")
 async def test_endpoint():
     """Test endpoint to verify API is working"""
+    logger.info("=== TEST ENDPOINT CALLED ===")
     return {"message": "API is working", "timestamp": datetime.now().isoformat()}
 
 @app.get("/health")
@@ -982,6 +985,7 @@ async def get_auth_user(current_user: dict = Depends(verify_token)):
 @app.post("/api/jobs")
 async def create_job(job: ScrapingJobCreate, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     """Create a new scraping job"""
+    logger.info(f"Creating new job with URL: {job.url}, type: {job.job_type}")
     job_id = str(uuid.uuid4())
     
     job_data = ScrapingJob(
@@ -995,9 +999,11 @@ async def create_job(job: ScrapingJobCreate, background_tasks: BackgroundTasks, 
     )
     
     jobs_db[job_id] = job_data.dict()
+    logger.info(f"Job {job_id} stored in database, status: pending")
     
     # Start job in background
     background_tasks.add_task(execute_scraping_job, job_id, job)
+    logger.info(f"Background task added for job {job_id}")
     
     return {"message": "Job created successfully", "job_id": job_id, "job": job_data}
 
