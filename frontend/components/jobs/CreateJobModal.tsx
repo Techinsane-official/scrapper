@@ -74,15 +74,13 @@ export function CreateJobModal({ isOpen, onClose }: CreateJobModalProps) {
   })
 
   const onSubmit = (data: CreateJobForm) => {
+    // For now, we'll create a simple product scraping job
+    // In the future, this can be enhanced to support different job types
     const jobData = {
-      name: data.name,
-      description: data.description,
-      retailer: data.retailer,
+      url: data.category || data.search_query || 'https://www.amazon.com/s?k=electronics',
+      job_type: 'product',
       max_pages: data.max_pages,
-      ...(jobType === 'category' 
-        ? { category: data.category }
-        : { search_query: data.search_query }
-      ),
+      keywords: data.search_query || 'electronics'
     }
     createJobMutation.mutate(jobData)
   }
